@@ -1,4 +1,6 @@
-user_id,student_id,student_name,module_id,module_name,previous_gpa,attendance,assignment_score,quiz_score,study_hours,engagement_score,late_assignments,completed_assignments,learning_progress
-6ad5330827e2736e206f9bc3,STU001,Amanda Perera,CS101,Introduction to Programming,1.7,35,30,32,3.0,32,8,1,25
-6ad5f18bd68995cedfecf51d,STU002,Kasun Silva,CS102,Data Structures,2.4,65,60,58,10.0,62,3,5,55
-6ad5330827e2736e206f9bc3,STU001,Amanda Perera,CS101,Introduction to Programming,3.4,90,85,88,14.0,85,0,9,85
+﻿user_id,student_id,student_name,module_id,module_name,previous_gpa,attendance,assignment_score,quiz_score,study_hours,engagement_score,late_assignments,completed_assignments,learning_progress
+6ad5330827e2736e206f9bc3,STU001,Amanda Perera,CS101,Introduction to Programming,3.2,92,86,89,14,88,1,10,87
+6ad5330827e2736e206f9bc3,STU001,Amanda Perera,CS102,Data Structures,2.4,68,63,59,8,64,4,8,58
+6ad5330827e2736e206f9bc3,STU001,Amanda Perera,CS103,Database Systems,1.5,42,38,35,3,34,7,8,30
+6ad5f18bd68995cedfecf51d,STU002,Kasun Silva,CS101,Introduction to Programming,2.8,78,74,71,11,76,2,9,73
+6ad5f18bd68995cedfecf51d,STU002,Kasun Silva,CS102,Data Structures,1.9,55,48,51,5,46,6,8,44
