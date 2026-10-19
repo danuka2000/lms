@@ -19,7 +19,7 @@ const DashboardLayout = ({ title }) => {
                 </main>
             </div>
 
-            <style jsx>{`
+            <style>{`
                 .layout-wrapper {
                     display: flex;
                     min-height: 100vh;

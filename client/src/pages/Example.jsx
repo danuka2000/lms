@@ -42,7 +42,7 @@ const Example = () => {
 
 
 
-             <style jsx>{`
+             <style>{`
                 .groups-container {
                     padding: 30px 40px;
                     font-family: 'Inter', sans-serif;

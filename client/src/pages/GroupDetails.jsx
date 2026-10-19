@@ -820,7 +820,7 @@ const GroupDetails = () => {
                 </div>
             )}
 
-            <style jsx>{`
+            <style>{`
                 .group-details-container {
                     padding: 20px 40px 40px;
                     font-family: 'Inter', sans-serif;

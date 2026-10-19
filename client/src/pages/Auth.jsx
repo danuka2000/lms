@@ -264,7 +264,7 @@ console.log("Python URL:", pythonUrl);
                 </div>
             </div>
 
-            <style jsx>{`
+            <style>{`
         .auth-wrapper {
           min-height: 100vh;
           display: flex;

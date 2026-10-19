@@ -12,7 +12,7 @@ const Dashboard = () => {
                 <p>Select a module from the sidebar to get started.</p>
             </div>
 
-            <style jsx>{`
+            <style>{`
                 .welcome-card {
                     background: white;
                     padding: 40px;

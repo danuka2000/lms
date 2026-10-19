@@ -70,7 +70,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     </button>
                 </div>
 
-                <style jsx>{`
+                <style>{`
                     .sidebar {
                         width: 260px;
                         background-color: white;

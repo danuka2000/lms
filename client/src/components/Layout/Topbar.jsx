@@ -176,7 +176,7 @@ const Topbar = ({ pageTitle, onMenuClick }) => {
                 </div>
             </div>
 
-            <style jsx>{`
+            <style>{`
                 .topbar {
                     height: 100px;
                     display: flex;

@@ -21,7 +21,7 @@ const EmptyState = ({ title, description, icon: Icon = Search, onClearSearch }) 
                 </button>
             )}
 
-            <style jsx>{`
+            <style>{`
                 .empty-state-container {
                     display: flex;
                     flex-direction: column;

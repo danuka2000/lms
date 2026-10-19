@@ -21,7 +21,7 @@ const SkeletonGroup = () => {
                 <div className="skeleton-btn shunt" />
             </div>
 
-            <style jsx>{`
+            <style>{`
                 .group-card-skeleton {
                     background: white;
                     border-radius: 20px;
