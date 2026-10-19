@@ -30,6 +30,17 @@ FEATURES = [
     "learning_progress",
 ]
 RISK_LEVELS = {"low": "Low", "medium": "Medium", "high": "High"}
+RISK_FACTOR_LABELS = {
+    "previous_gpa": "Previous GPA",
+    "attendance": "Attendance",
+    "assignment_score": "Assignment Score",
+    "quiz_score": "Quiz Score",
+    "study_hours": "Study Hours",
+    "engagement_score": "Engagement Score",
+    "late_assignments": "Late Assignments",
+    "completed_assignments": "Completed Assignments",
+    "learning_progress": "Learning Progress",
+}
 
 
 def _add_engineered_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -76,7 +87,7 @@ def _make_pipeline(class_weight: dict | None = None) -> Pipeline:
     )
 
 
-def train_model() -> tuple[Pipeline, dict[str, float | int]]:
+def train_model() -> tuple[Pipeline, dict[str, object]]:
     """Train from the labeled CSV and save the estimator in ModelOutput."""
     if not DATASET_PATH.exists():
         raise FileNotFoundError(
@@ -98,6 +109,18 @@ def train_model() -> tuple[Pipeline, dict[str, float | int]]:
 
     # Add engineered features
     training = _add_engineered_features(training)
+
+    # Establish data-derived indicators from the Low-risk cohort. For positive
+    # performance measures, values below the 25th percentile are weak compared
+    # with Low-risk students. For late assignments, values above the 75th
+    # percentile are flagged. These explainers are indicators, not causal claims.
+    low_risk_rows = training.loc[training["risk_level"] == "Low", FEATURES]
+    weak_thresholds = {
+        feature: float(low_risk_rows[feature].quantile(0.25))
+        for feature in FEATURES
+        if feature != "late_assignments"
+    }
+    weak_thresholds["late_assignments"] = float(low_risk_rows["late_assignments"].quantile(0.75))
 
     # Compute balanced class weights
     from collections import Counter
@@ -123,11 +146,13 @@ def train_model() -> tuple[Pipeline, dict[str, float | int]]:
         "training_rows": len(training),
         "classes": int(training["risk_level"].nunique()),
         "accuracy": train_acc,
+        "weak_thresholds": weak_thresholds,
     }
 
 
 def assess_manual_records(user_id: str) -> list[dict]:
-    model, _ = train_model()
+    model, training_info = train_model()
+    weak_thresholds = training_info["weak_thresholds"]
     if not INPUT_PATH.exists():
         raise FileNotFoundError(
             f"Manual input CSV not found at {INPUT_PATH}. Create it using the template in python/data/."
@@ -162,6 +187,7 @@ def assess_manual_records(user_id: str) -> list[dict]:
             "module_name": str(row["module_name"]),
             "risk_level": str(row["risk_level"]),
             "confidence": round(float(row["confidence"]), 3),
+            "risk_factors": _risk_factors(row, weak_thresholds),
             "previous_gpa": _number(row["previous_gpa"]),
             "attendance": _number(row["attendance"]),
             "assignment_score": _number(row["assignment_score"]),
@@ -178,3 +204,21 @@ def assess_manual_records(user_id: str) -> list[dict]:
 
 def _number(value):
     return None if pd.isna(value) else float(value)
+
+
+def _risk_factors(row, thresholds: dict[str, float]) -> list[dict]:
+    """Return only indicators outside the healthy range learned from training data."""
+    factors = []
+    for feature in FEATURES:
+        value = _number(row[feature])
+        if value is None:
+            continue
+        threshold = thresholds[feature]
+        is_weak = value > threshold if feature == "late_assignments" else value < threshold
+        if is_weak:
+            factors.append({
+                "key": feature,
+                "label": RISK_FACTOR_LABELS[feature],
+                "value": value,
+            })
+    return factors
