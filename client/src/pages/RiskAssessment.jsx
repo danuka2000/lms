@@ -9,15 +9,25 @@ const RiskAssessment = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [query, setQuery] = useState('');
+    const [currentUserId, setCurrentUserId] = useState('');
 
     const loadAssessments = async () => {
         setLoading(true);
         setError('');
         try {
-            const { data } = await axios.get(`${API_URL}/api/risk-assessment`);
-            setAssessments(data.assessments || []);
+            const token = localStorage.getItem('token');
+            if (!token) throw new Error('Sign in to view your risk assessment.');
+            const { data } = await axios.get(`${API_URL}/api/risk-assessment`, {
+                headers: { 'x-auth-token': token },
+            });
+            const userId = String(data.user_id || '');
+            if (!userId) {
+                throw new Error('The Python service is outdated. Restart it to enable account-specific risk results.');
+            }
+            setCurrentUserId(userId);
+            setAssessments((data.assessments || []).filter((item) => String(item.user_id) === userId));
         } catch (err) {
-            setError(err.response?.data?.error || 'Could not load assessments. Check that the Python service is running on port 3000.');
+            setError(err.response?.data?.error || err.message || 'Could not load assessments. Check that the Python service is running on port 3000.');
         } finally {
             setLoading(false);
         }
@@ -39,8 +49,8 @@ const RiskAssessment = () => {
             <div className="risk-heading">
                 <div>
                     <span className="eyebrow">SPRINT 1 · MANUAL ASSESSMENT</span>
-                    <h1>Student risk assessment</h1>
-                    <p>Review at-risk modules from the manually entered student data.</p>
+                    <h1>My risk assessment</h1>
+                    <p>Review at-risk modules for your enrolled subjects.</p>
                 </div>
                 <button className="refresh-button" onClick={loadAssessments} disabled={loading}>
                     <RefreshCw size={16} className={loading ? 'spin' : ''} /> Refresh
@@ -58,7 +68,7 @@ const RiskAssessment = () => {
                     <div><h2>Modules requiring attention</h2><p>Each row represents one student enrolled in one module.</p></div>
                     <label className="search-box"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search student or module" /></label>
                 </div>
-                {error ? <div className="notice error-notice"><strong>Assessment unavailable</strong><span>{error}</span><small>Confirm the training and manual input CSV files are in python/data, then restart the Python service.</small></div> : loading ? <div className="table-message">Loading risk assessments…</div> : filtered.length === 0 ? <div className="table-message">{assessments.length === 0 ? 'No at-risk modules found. Add student/module rows to python/data/manual_risk_inputs.csv and refresh.' : 'No results match your search.'}</div> : (
+                {error ? <div className="notice error-notice"><strong>Assessment unavailable</strong><span>{error}</span><small>Confirm the training and manual input CSV files are in python/data, then restart the Python service.</small></div> : loading ? <div className="table-message">Loading risk assessments…</div> : filtered.length === 0 ? <div className="table-message">{assessments.length === 0 ? <>No High/Medium risk modules found for your account. Set <code>user_id</code> on your enrolled module rows in <code>python/data/manual_risk_inputs.csv</code> to <code>{currentUserId || 'unavailable'}</code>, then refresh.</> : 'No results match your search.'}</div> : (
                     <div className="table-wrap"><table><thead><tr><th>Student</th><th>Module</th><th>Risk</th><th>Quiz score</th><th>Attendance</th><th>Previous GPA</th><th>Learning progress</th></tr></thead><tbody>
                         {filtered.map((item, index) => <tr key={`${item.student_id}-${item.module_id}-${index}`}>
                             <td><strong>{item.student_name}</strong><span className="secondary">{item.student_id}</span></td>

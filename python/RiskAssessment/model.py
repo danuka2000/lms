@@ -84,17 +84,24 @@ def train_model() -> tuple[Pipeline, dict[str, float | int]]:
     }
 
 
-def assess_manual_records() -> list[dict]:
+def assess_manual_records(user_id: str) -> list[dict]:
     model, _ = train_model()
     if not INPUT_PATH.exists():
         raise FileNotFoundError(
             f"Manual input CSV not found at {INPUT_PATH}. Create it using the template in python/data/."
         )
     records = pd.read_csv(INPUT_PATH)
-    required = ["student_id", "student_name", "module_id", "module_name"] + FEATURES
+    required = ["user_id", "student_id", "student_name", "module_id", "module_name"] + FEATURES
     missing = [column for column in required if column not in records.columns]
     if missing:
         raise ValueError(f"Manual input CSV is missing required columns: {', '.join(missing)}")
+    if records.empty:
+        return []
+
+    # Manual rows represent a student's enrolled modules. Never return rows
+    # belonging to another signed-in account.
+    records["user_id"] = records["user_id"].astype("string").str.strip()
+    records = records[records["user_id"] == str(user_id)].copy()
     if records.empty:
         return []
 
@@ -103,6 +110,7 @@ def assess_manual_records() -> list[dict]:
     risks = records[records["risk_level"].isin(["High", "Medium"])]
     return [
         {
+            "user_id": str(row["user_id"]),
             "student_id": str(row["student_id"]),
             "student_name": str(row["student_name"]),
             "module_id": str(row["module_id"]),

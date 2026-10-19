@@ -1,7 +1,6 @@
 from flask import Flask, request, send_file, jsonify
 from flask_cors import CORS
 from Example.graph import create_graph
-from Example.new import get_data
 
 from pymongo import MongoClient
 from bson import ObjectId
@@ -33,13 +32,21 @@ BASE_DIR = Path(__file__).resolve().parent
 MONGO_URI = os.getenv("MONGO_URI")
 JWT_SECRET = os.getenv("JWT_SECRET")
 
+# Keep MongoDB optional at startup. Risk assessment runs from local CSV/model
+# files, so a MongoDB DNS or network issue should not prevent Flask from starting.
+client = db = collection = None
 if MONGO_URI:
-    client = MongoClient(MONGO_URI)
-    db = client["research_db"]
-    collection = db["users"]
-else:
-    # Risk assessment can run independently when MongoDB is not configured.
-    client = db = collection = None
+    try:
+        client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
+        db = client["research_db"]
+        collection = db["users"]
+        # Validate connectivity here; MongoClient construction can otherwise be lazy.
+        client.admin.command("ping")
+    except Exception as exc:
+        app.logger.warning("MongoDB unavailable; database-backed routes are disabled: %s", exc)
+        if client is not None:
+            client.close()
+        client = db = collection = None
 
 @app.route("/", methods=["GET"])
 def home():
@@ -258,8 +265,11 @@ def graph():
 def example_data():
     try:
         if collection is None:
-            return jsonify({"error": "MONGO_URI is not configured"}), 503
-        data = get_data()
+            return jsonify({"error": "MongoDB is unavailable or MONGO_URI is not configured"}), 503
+        data = list(collection.find({}, {"_id": 0, "password": 0}))
+        for user in data:
+            if "createdAt" in user:
+                user["createdAt"] = str(user["createdAt"])
 
         return jsonify(data), 200
 
@@ -273,12 +283,27 @@ def example_data():
 
 @app.route("/api/risk-assessment", methods=["GET"])
 def risk_assessment():
-    """Predict risks for each manually supplied student/module row."""
+    """Return at-risk modules assigned to the authenticated user only."""
+    token = request.headers.get("x-auth-token")
+    if not token:
+        return jsonify({"error": "Sign in to view your risk assessment."}), 401
+    if not JWT_SECRET:
+        return jsonify({"error": "JWT_SECRET is not configured for the Python service."}), 503
+
     try:
+        decoded = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        user_id = (decoded.get("user") or {}).get("id") or decoded.get("user_id")
+        if not user_id:
+            return jsonify({"error": "The login token does not contain a user ID. Sign out and sign in again."}), 401
+
         from RiskAssessment.model import assess_manual_records
 
-        assessments = assess_manual_records()
-        return jsonify({"assessments": assessments, "count": len(assessments)}), 200
+        assessments = assess_manual_records(str(user_id))
+        return jsonify({"assessments": assessments, "count": len(assessments), "user_id": str(user_id)}), 200
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Your session has expired. Sign in again."}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Your login token is invalid. Sign in again."}), 401
     except FileNotFoundError as exc:
         return jsonify({"error": str(exc)}), 404
     except ValueError as exc:
