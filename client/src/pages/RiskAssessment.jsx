@@ -59,16 +59,16 @@ const RiskAssessment = () => {
                     <label className="search-box"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search student or module" /></label>
                 </div>
                 {error ? <div className="notice error-notice"><strong>Assessment unavailable</strong><span>{error}</span><small>Confirm the training and manual input CSV files are in python/data, then restart the Python service.</small></div> : loading ? <div className="table-message">Loading risk assessments…</div> : filtered.length === 0 ? <div className="table-message">{assessments.length === 0 ? 'No at-risk modules found. Add student/module rows to python/data/manual_risk_inputs.csv and refresh.' : 'No results match your search.'}</div> : (
-                    <div className="table-wrap"><table><thead><tr><th>Student</th><th>Module</th><th>Risk</th><th>Quiz accuracy</th><th>Engagement</th><th>Previous GPA</th><th>Difficulty</th></tr></thead><tbody>
+                    <div className="table-wrap"><table><thead><tr><th>Student</th><th>Module</th><th>Risk</th><th>Quiz score</th><th>Attendance</th><th>Previous GPA</th><th>Learning progress</th></tr></thead><tbody>
                         {filtered.map((item, index) => <tr key={`${item.student_id}-${item.module_id}-${index}`}>
                             <td><strong>{item.student_name}</strong><span className="secondary">{item.student_id}</span></td>
                             <td><strong>{item.module_name}</strong><span className="secondary">{item.module_id}</span></td>
                             <td><span className={`risk-badge ${item.risk_level.toLowerCase()}`}><i />{item.risk_level} risk</span></td>
-                            <td>{item.quiz_accuracy ?? '—'}%</td><td>{item.engagement_score ?? '—'}%</td><td>{item.previous_gpa ?? '—'}</td><td>{item.contextual_difficulty_level}</td>
+                            <td>{item.quiz_score ?? '—'}%</td><td>{item.attendance ?? '—'}%</td><td>{item.previous_gpa ?? '—'}</td><td>{item.learning_progress ?? '—'}%</td>
                         </tr>)}
                     </tbody></table></div>
                 )}
-                <div className="data-note">Predictions use manually entered module data and the supplied learning outcome dataset. LMS results are not connected in this sprint.</div>
+                <div className="data-note">Predictions use manually entered module data and the student academic risk training dataset. LMS results are not connected in this sprint.</div>
             </section>
 
             <style>{`

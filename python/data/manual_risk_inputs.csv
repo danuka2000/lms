@@ -1,5 +1,4 @@
-student_id,student_name,module_id,module_name,age,previous_gpa,completed_modules,avg_time_per_module,engagement_score,distraction_events,quiz_accuracy,feedback_score,path_efficiency_score,education_level,learning_style,contextual_difficulty_level
-STU001,Amanda Perera,CS101,Introduction to Programming,20,2,2,38,32,8,32,2,48,UG,Visual,High
-STU001,Amanda Perera,CS102,Data Structures,20,2.1,2,48,63,3,78,4,75,UG,Visual,Medium
-STU002,Kasun Silva,CS101,Introduction to Programming,21,2.4,1,62,38,7,49,2,52,UG,Kinesthetic,High
-STU004,Nimal Perera,CS103,Database Fundamentals,20,2.0,3,59,60,5,50,1,70,UG,Visual,High
+student_id,student_name,module_id,module_name,previous_gpa,attendance,assignment_score,quiz_score,study_hours,engagement_score,late_assignments,completed_assignments,learning_progress
+STU001,Amanda Perera,CS101,Introduction to Programming,1.7,35,30,32,3.0,32,8,1,25
+STU001,Amanda Perera,CS102,Data Structures,2.4,65,60,58,10.0,62,3,5,55
+STU002,Kasun Silva,CS101,Introduction to Programming,3.4,90,85,88,14.0,85,0,9,85

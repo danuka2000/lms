@@ -1,8 +1,8 @@
 # Sprint 1 risk assessment data
 
-- `AI_Personalized_Learning.csv` is the historical training dataset. Copy the supplied CSV here.
-- `manual_risk_inputs.csv` is the manually entered live input. Each row is one student in one module. Add or edit rows here; a student with risk in several modules appears several times in the client report.
+- `student_academic_risk.csv` is the training dataset. It contains student performance features and the target label `academic_risk_level` (`Low`, `Medium`, or `High`).
+- `manual_risk_inputs.csv` is the manually entered live input. Each row represents one student in one module. Add a separate row for each module; the same student can appear more than once.
 
-The manual CSV must include the columns shown in the template. Feature meanings and scales should match the training dataset: quiz accuracy, engagement, and path efficiency are 0–100; feedback score uses the dataset's scale; GPA uses the dataset's GPA scale. The model predicts each module's risk using these inputs. The client displays High and Medium rows. The model learns from `learning_outcome`: Fail/Poor maps to High, Fair/Average/Satisfactory to Medium, Good/Excellent to Low.
+The manual CSV includes student and module identifiers plus the feature columns from the training dataset: `previous_gpa`, `attendance`, `assignment_score`, `quiz_score`, `study_hours`, `engagement_score`, `late_assignments`, `completed_assignments`, and `learning_progress`. Use the same measurement scales as the training file. The model learns the risk classes directly from `academic_risk_level`; the client lists High and Medium risk modules.
 
-For a different location, set `RISK_TRAINING_DATA` or `RISK_INPUT_DATA` in `python/.env` to an absolute CSV path.
+The older `AI_Personalized_Learning.csv` is no longer used by this risk model. To use a dataset at a different location, set `RISK_TRAINING_DATA` or `RISK_INPUT_DATA` in `python/.env` to an absolute CSV path.
