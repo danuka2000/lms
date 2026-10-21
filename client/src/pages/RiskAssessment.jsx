@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import axios from 'axios';
 import { ArrowUpRight, BookOpen, RefreshCw, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+const AdminRiskDashboard = lazy(() => import('./AdminRiskDashboard'));
 
 const API_URL = import.meta.env.VITE_PYTHON_BACKEND || 'http://localhost:3000';
 
@@ -30,6 +32,7 @@ const RiskAssessment = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [selectedAssessment, setSelectedAssessment] = useState(null);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     const loadAssessments = async () => {
         setLoading(true);
@@ -44,7 +47,10 @@ const RiskAssessment = () => {
             if (!userId) {
                 throw new Error('The Python service is outdated. Restart it to enable account-specific risk results.');
             }
-            setAssessments((data.assessments || []).filter((item) => String(item.user_id) === userId));
+            setIsAdmin(Boolean(data.is_admin));
+            setAssessments(data.is_admin
+                ? (data.assessments || [])
+                : (data.assessments || []).filter((item) => String(item.user_id) === userId));
         } catch (err) {
             const apiError = err.response?.data?.error || err.response?.data?.message || '';
             if (apiError.toLowerCase().includes('manual_risk_inputs.csv') || apiError.toLowerCase().includes('manual input csv')) {
@@ -67,6 +73,14 @@ const RiskAssessment = () => {
         document.addEventListener('keydown', closeOnEscape);
         return () => document.removeEventListener('keydown', closeOnEscape);
     }, [selectedAssessment]);
+
+    if (isAdmin) {
+        return (
+            <Suspense fallback={<div className="page-message">Loading admin risk dashboard...</div>}>
+                <AdminRiskDashboard assessments={assessments} loading={loading} error={error} onRefresh={loadAssessments} />
+            </Suspense>
+        );
+    }
 
     return (
         <div className="risk-page">

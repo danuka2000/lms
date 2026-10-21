@@ -66,6 +66,16 @@ def get_risk_inputs(collection: Collection, user_id: str) -> list[dict]:
     )
 
 
+def get_all_risk_inputs(collection: Collection) -> list[dict]:
+    """Return all user-owned risk entries for an authorized administrator."""
+    return list(
+        collection.find(
+            {},
+            {"_id": 0, **{column: 1 for column in RECORD_COLUMNS}},
+        ).sort("created_at", 1)
+    )
+
+
 def _migrate_legacy_sqlite_records(collection: Collection) -> None:
     migrations = collection.database["risk_assessment_migrations"]
     if migrations.find_one({"_id": MIGRATION_ID}):

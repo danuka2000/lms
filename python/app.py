@@ -298,7 +298,9 @@ def risk_assessment():
 
     try:
         decoded = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-        user_id = (decoded.get("user") or {}).get("id") or decoded.get("user_id")
+        user_claims = decoded.get("user") or {}
+        user_id = user_claims.get("id") or decoded.get("user_id")
+        is_admin = str(user_claims.get("role", decoded.get("role", ""))).lower() == "admin"
         if not user_id:
             return jsonify({"error": "The login token does not contain a user ID. Sign out and sign in again."}), 401
 
@@ -308,6 +310,7 @@ def risk_assessment():
 
         from RiskAssessment.storage import (
             initialize_risk_store,
+            get_all_risk_inputs,
             get_risk_inputs,
             save_risk_input,
         )
@@ -371,9 +374,24 @@ def risk_assessment():
             save_risk_input(risk_input_collection, str(user_id), record)
             return jsonify({"assessment": assessment}), 201
 
+        if is_admin:
+            records = get_all_risk_inputs(risk_input_collection)
+            assessments = assess_records(records) if records else []
+            return jsonify({
+                "assessments": assessments,
+                "count": len(assessments),
+                "user_id": str(user_id),
+                "is_admin": True,
+            }), 200
+
         records = get_risk_inputs(risk_input_collection, str(user_id))
         assessments = assess_records(records, only_at_risk=True) if records else []
-        return jsonify({"assessments": assessments, "count": len(assessments), "user_id": str(user_id)}), 200
+        return jsonify({
+            "assessments": assessments,
+            "count": len(assessments),
+            "user_id": str(user_id),
+            "is_admin": False,
+        }), 200
     except jwt.ExpiredSignatureError:
         return jsonify({"error": "Your session has expired. Sign in again."}), 401
     except jwt.InvalidTokenError:

@@ -194,8 +194,17 @@ def assess_records(records: pd.DataFrame | list[dict], *, only_at_risk: bool = F
     # Add engineered features for prediction
     records = _add_engineered_features(records)
 
-    records["risk_level"] = model.predict(records[MODEL_FEATURES])
-    records["confidence"] = model.predict_proba(records[MODEL_FEATURES]).max(axis=1)
+    predictions = model.predict(records[MODEL_FEATURES])
+    probabilities = model.predict_proba(records[MODEL_FEATURES])
+    records["risk_level"] = predictions
+    records["confidence"] = probabilities.max(axis=1)
+    records["risk_probabilities"] = [
+        {
+            str(level): round(float(probability), 4)
+            for level, probability in zip(model.classes_, row_probabilities)
+        }
+        for row_probabilities in probabilities
+    ]
     if only_at_risk:
         records = records[records["risk_level"].isin(["High", "Medium"])]
     return [
@@ -207,6 +216,7 @@ def assess_records(records: pd.DataFrame | list[dict], *, only_at_risk: bool = F
             "module_name": str(row["module_name"]),
             "risk_level": str(row["risk_level"]),
             "confidence": round(float(row["confidence"]), 3),
+            "risk_probabilities": row["risk_probabilities"],
             "risk_factors": _risk_factors(row, weak_thresholds),
             "previous_gpa": _number(row["previous_gpa"]),
             "attendance": _number(row["attendance"]),
