@@ -1,11 +1,24 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, UserCircle, HelpCircle, LogOut, Flag, Calendar, FileText, MessageSquare, X } from 'lucide-react';
+import { LayoutDashboard, Users, UserCircle, HelpCircle, LogOut, Flag, Calendar, FileText, MessageSquare, FilePlus2, X } from 'lucide-react';
+import { clearRiskAssessmentNotice, getPendingRiskModules, RISK_ASSESSMENT_NOTICE_EVENT } from '../../utils/riskAssessmentNotice';
 
 const Sidebar = ({ isOpen, onClose }) => {
     const navigate = useNavigate();
+    const [pendingRiskCount, setPendingRiskCount] = useState(() => getPendingRiskModules().length);
+
+    useEffect(() => {
+        const refreshNotice = () => setPendingRiskCount(getPendingRiskModules().length);
+        window.addEventListener(RISK_ASSESSMENT_NOTICE_EVENT, refreshNotice);
+        window.addEventListener('storage', refreshNotice);
+        return () => {
+            window.removeEventListener(RISK_ASSESSMENT_NOTICE_EVENT, refreshNotice);
+            window.removeEventListener('storage', refreshNotice);
+        };
+    }, []);
 
     const handleLogout = () => {
+        clearRiskAssessmentNotice();
         localStorage.removeItem('token');
         navigate('/login');
     };
@@ -40,9 +53,14 @@ const Sidebar = ({ isOpen, onClose }) => {
                             <Flag size={20} />
                             <span>Personalized plan</span>
                         </NavLink>
-                        <NavLink to="/RiskAssessment" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'} onClick={onClose}>
+                        <NavLink to="/RiskAssessment" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'} onClick={() => { clearRiskAssessmentNotice(); onClose(); }}>
                             <Calendar size={20} />
                             <span>Risk Assessment</span>
+                            {pendingRiskCount > 0 && <span className="risk-nav-indicator">At risk{pendingRiskCount > 1 ? ` · ${pendingRiskCount}` : ''}</span>}
+                        </NavLink>
+                        <NavLink to="/RiskInput" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'} onClick={onClose}>
+                            <FilePlus2 size={20} />
+                            <span>Manual Risk Input</span>
                         </NavLink>
                         <NavLink to="/Profiling" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'} onClick={onClose}>
                             <FileText size={20} />
@@ -172,6 +190,18 @@ const Sidebar = ({ isOpen, onClose }) => {
                     .nav-item:hover {
                         background-color: #f8f9fa;
                         color: var(--primary);
+                    }
+
+                    .risk-nav-indicator {
+                        margin-left: auto;
+                        padding: 4px 8px;
+                        border-radius: 999px;
+                        background: #fff0ed;
+                        color: #bc493b;
+                        font-size: 10px;
+                        font-weight: 750;
+                        line-height: 1.2;
+                        white-space: nowrap;
                     }
 
                     .nav-item.active {

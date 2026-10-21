@@ -27,6 +27,9 @@ pnpm-debug.log*
 *.pkl
 *.pickle
 
+# Local student risk input database
+**/manual_risk_entries.sqlite3*
+
 # Local backups, logs, and operating-system files
 *.bak
 *.log

@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import bcrypt
 import jwt
 import os
+import threading
 import warnings
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -25,11 +26,12 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 app = Flask(__name__)
 CORS(app)
 
-# Sprint 1 risk assessment uses an offline-trained model and a manually maintained
-# CSV of student/module inputs. LMS data is intentionally not queried here.
+# Sprint 1 risk assessment uses the labeled training CSV and manually submitted
+# app records. LMS data is intentionally not queried here.
 BASE_DIR = Path(__file__).resolve().parent
 
 MONGO_URI = os.getenv("MONGO_URI")
+MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME", "test")
 JWT_SECRET = os.getenv("JWT_SECRET")
 
 # Keep MongoDB optional at startup. Risk assessment runs from local CSV/model
@@ -38,7 +40,7 @@ client = db = collection = None
 if MONGO_URI:
     try:
         client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
-        db = client["research_db"]
+        db = client[MONGODB_DB_NAME]
         collection = db["users"]
         # Validate connectivity here; MongoClient construction can otherwise be lazy.
         client.admin.command("ping")
@@ -47,6 +49,10 @@ if MONGO_URI:
         if client is not None:
             client.close()
         client = db = collection = None
+
+risk_input_collection = db["risk_inputs"] if db is not None else None
+risk_store_initialized = False
+risk_store_init_lock = threading.Lock()
 
 @app.route("/", methods=["GET"])
 def home():
@@ -281,9 +287,9 @@ def example_data():
         }), 500
 
 
-@app.route("/api/risk-assessment", methods=["GET"])
+@app.route("/api/risk-assessment", methods=["GET", "POST"])
 def risk_assessment():
-    """Return at-risk modules assigned to the authenticated user only."""
+    """Read or submit risk records scoped to the authenticated user."""
     token = request.headers.get("x-auth-token")
     if not token:
         return jsonify({"error": "Sign in to view your risk assessment."}), 401
@@ -296,9 +302,77 @@ def risk_assessment():
         if not user_id:
             return jsonify({"error": "The login token does not contain a user ID. Sign out and sign in again."}), 401
 
-        from RiskAssessment.model import assess_manual_records
+        from RiskAssessment.model import FEATURES, OPTIONAL_INPUT_FEATURES, assess_records
+        if db is None:
+            return jsonify({"error": "MongoDB is unavailable or MONGO_URI is not configured; risk inputs cannot be saved."}), 503
 
-        assessments = assess_manual_records(str(user_id))
+        from RiskAssessment.storage import (
+            initialize_risk_store,
+            get_risk_inputs,
+            save_risk_input,
+        )
+
+        global risk_store_initialized
+        if not risk_store_initialized:
+            with risk_store_init_lock:
+                if not risk_store_initialized:
+                    initialize_risk_store(
+                        risk_input_collection,
+                        legacy_mongodb_database=client["research_db"]
+                        if MONGODB_DB_NAME != "research_db"
+                        else None,
+                    )
+                    risk_store_initialized = True
+
+        if request.method == "POST":
+            data = request.get_json(silent=True)
+            if not isinstance(data, dict):
+                return jsonify({"error": "Submit the student and module details as JSON."}), 400
+
+            text_fields = ("student_id", "student_name", "module_id", "module_name")
+            record = {}
+            for field in text_fields:
+                value = str(data.get(field, "")).strip()
+                if not value:
+                    return jsonify({"error": f"{field.replace('_', ' ').title()} is required."}), 400
+                if len(value) > 120:
+                    return jsonify({"error": f"{field.replace('_', ' ').title()} must be 120 characters or fewer."}), 400
+                record[field] = value
+
+            for field in FEATURES:
+                if field in OPTIONAL_INPUT_FEATURES and data.get(field) in (None, ""):
+                    record[field] = None
+                    continue
+                try:
+                    value = float(data.get(field))
+                except (TypeError, ValueError):
+                    return jsonify({"error": f"Enter a valid number for {field.replace('_', ' ')}."}), 400
+                if not (float("-inf") < value < float("inf")):
+                    return jsonify({"error": f"Enter a finite number for {field.replace('_', ' ')}."}), 400
+                record[field] = value
+
+            for field in ("attendance", "assignment_score", "quiz_score", "engagement_score", "learning_progress"):
+                if record[field] is None:
+                    continue
+                if not 0 <= record[field] <= 100:
+                    return jsonify({"error": f"{field.replace('_', ' ').title()} must be from 0 to 100."}), 400
+            if record["previous_gpa"] is not None and not 0 <= record["previous_gpa"] <= 4:
+                return jsonify({"error": "Previous GPA must be from 0 to 4."}), 400
+            for field in ("study_hours", "late_assignments", "completed_assignments"):
+                if record[field] < 0:
+                    return jsonify({"error": f"{field.replace('_', ' ').title()} cannot be negative."}), 400
+            for field in ("late_assignments", "completed_assignments"):
+                if not record[field].is_integer():
+                    return jsonify({"error": f"{field.replace('_', ' ').title()} must be a whole number."}), 400
+                record[field] = int(record[field])
+
+            record["user_id"] = str(user_id)
+            assessment = assess_records([record])[0]
+            save_risk_input(risk_input_collection, str(user_id), record)
+            return jsonify({"assessment": assessment}), 201
+
+        records = get_risk_inputs(risk_input_collection, str(user_id))
+        assessments = assess_records(records, only_at_risk=True) if records else []
         return jsonify({"assessments": assessments, "count": len(assessments), "user_id": str(user_id)}), 200
     except jwt.ExpiredSignatureError:
         return jsonify({"error": "Your session has expired. Sign in again."}), 401

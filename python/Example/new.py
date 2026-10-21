@@ -7,10 +7,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 MONGO_URI = os.getenv("MONGO_URI")
+MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME", "test")
 
 client = MongoClient(MONGO_URI)
 
-db = client["research_db"]
+db = client[MONGODB_DB_NAME]
 collection = db["users"]
 
 
@@ -42,4 +43,4 @@ def get_data():
         df["createdAt"] = df["createdAt"].astype(str)
 
     return df.to_dict(orient="records")
-    
+

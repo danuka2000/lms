@@ -1,10 +1,8 @@
 # Sprint 1 risk assessment data
 
-- `student_academic_risk.csv` is the training dataset. It contains performance features and the `academic_risk_level` target (`Low`, `Medium`, or `High`).
-- `manual_risk_inputs.csv` is the manually entered module list. Each row is one user and one enrolled module.
+- `student_academic_risk.csv` is the labeled training dataset. It contains the model features and the `academic_risk_level` target (`Low`, `Medium`, or `High`).
+- Student and module assessment inputs are submitted through the client app’s **Manual Risk Input** tab and stored in the MongoDB `test.risk_inputs` collection by default. Set `MONGODB_DB_NAME` in both `python/.env` and `server/.env` to another shared database name if needed. Records are scoped by the signed-in user ID; submitting the same module code updates that user's existing record.
 
-Set `user_id` to the MongoDB ID in the current user's login token. The Risk Assessment page shows that ID when no assigned risk rows are found. Add one row per enrolled module and use the same user ID on each row. The API verifies the login token and only evaluates rows whose `user_id` matches the signed-in account.
+The Python API takes the signed-in user's ID from their login token, so client submissions are associated with that account automatically. Submitting a module runs the trained model and marks the Risk Assessment tab when the result is Medium or High. Existing entries in `manual_risk_entries.sqlite3` and the previous `research_db.risk_inputs` collection are moved to the selected database when the risk API is first used.
 
-The remaining manual input columns are student/module identifiers plus the model features from the training CSV: `previous_gpa`, `attendance`, `assignment_score`, `quiz_score`, `study_hours`, `engagement_score`, `late_assignments`, `completed_assignments`, and `learning_progress`. Keep their measurement scales consistent with the training dataset.
-
-The older `AI_Personalized_Learning.csv` is not used by this risk model. To choose a different dataset path, set `RISK_TRAINING_DATA` or `RISK_INPUT_DATA` in `python/.env`.
+The manual form collects attendance, assignment and quiz scores, study hours, engagement score, late and completed assignments, and learning progress. Previous GPA remains an optional model input and is not collected by the form. The older `AI_Personalized_Learning.csv` is not used by this risk model. To choose a different training dataset path, set `RISK_TRAINING_DATA` in `python/.env`.

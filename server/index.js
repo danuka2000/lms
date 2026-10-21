@@ -25,7 +25,9 @@ app.use((req, res, next) => {
 });
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI)
+mongoose.connect(process.env.MONGODB_URI, {
+    dbName: process.env.MONGODB_DB_NAME || 'test',
+})
     .then(() => {
         const dbName = mongoose.connection.name;
         console.log(`Connected to MongoDB database: ${dbName}`);

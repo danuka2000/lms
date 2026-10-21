@@ -5,7 +5,9 @@ const User = require('../models/User');
 
 (async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(process.env.MONGODB_URI, {
+        dbName: process.env.MONGODB_DB_NAME || 'test',
+    });
 
     const email = 'student@gmail.com';
     const plainPassword = 'student@123';

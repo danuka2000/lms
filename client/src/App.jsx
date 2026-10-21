@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import Groups from './pages/Groups';
 import OptimalPath from './pages/OptimalPath';
 import RiskAssessment from './pages/RiskAssessment';
+import RiskInput from './pages/RiskInput';
 import Resources from './pages/Resources';
 import Profiling from './pages/Profiling';
 import GroupDetails from './pages/GroupDetails';
@@ -95,6 +96,17 @@ function App() {
                 >
                     <Route index element={<RiskAssessment />} />
                     
+                </Route>
+
+                <Route
+                    path="/RiskInput"
+                    element={
+                        <ProtectedRoute>
+                            <DashboardLayout title="Manual Risk Input" />
+                        </ProtectedRoute>
+                    }
+                >
+                    <Route index element={<RiskInput />} />
                 </Route>
 
                 <Route

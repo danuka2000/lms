@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { ArrowUpRight, BookOpen, RefreshCw, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_PYTHON_BACKEND || 'http://localhost:3000';
 
@@ -8,8 +9,10 @@ const metricRows = [
     { key: 'quiz_score', label: 'Quiz Score', suffix: '%' },
     { key: 'assignment_score', label: 'Assignment Score', suffix: '%' },
     { key: 'study_hours', label: 'Study Hours', suffix: ' hrs' },
+    { key: 'engagement_score', label: 'Engagement Score', suffix: '%' },
     { key: 'late_assignments', label: 'Late Assignments' },
     { key: 'completed_assignments', label: 'Completed Assignments' },
+    { key: 'learning_progress', label: 'Learning Progress', suffix: '%' },
 ];
 const metricByKey = Object.fromEntries(metricRows.map((metric) => [metric.key, metric]));
 
@@ -26,7 +29,6 @@ const RiskAssessment = () => {
     const [assessments, setAssessments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [currentUserId, setCurrentUserId] = useState('');
     const [selectedAssessment, setSelectedAssessment] = useState(null);
 
     const loadAssessments = async () => {
@@ -42,10 +44,14 @@ const RiskAssessment = () => {
             if (!userId) {
                 throw new Error('The Python service is outdated. Restart it to enable account-specific risk results.');
             }
-            setCurrentUserId(userId);
             setAssessments((data.assessments || []).filter((item) => String(item.user_id) === userId));
         } catch (err) {
-            setError(err.response?.data?.error || err.message || 'Could not load assessments. Check that the Python service is running on port 3000.');
+            const apiError = err.response?.data?.error || err.response?.data?.message || '';
+            if (apiError.toLowerCase().includes('manual_risk_inputs.csv') || apiError.toLowerCase().includes('manual input csv')) {
+                setError('The Python service is still running the old CSV-based version. Stop it with Ctrl+C, then restart the updated service from the python folder using .\\.venv\\Scripts\\python.exe app.py.');
+            } else {
+                setError(apiError || err.message || 'Could not load assessments. Check that the Python service is running on port 3000.');
+            }
         } finally {
             setLoading(false);
         }
@@ -78,12 +84,12 @@ const RiskAssessment = () => {
                 <div className="notice error-notice">
                     <strong>Assessment unavailable</strong>
                     <span>{error}</span>
-                    <small>Confirm the training and manual input CSV files are in python/data, then restart the Python service.</small>
+                    <small>Check that the training dataset is available in python/data and the Python service is running.</small>
                 </div>
             ) : loading ? (
                 <div className="page-message">Loading risk assessments...</div>
             ) : assessments.length === 0 ? (
-                <div className="page-message">No at-risk modules found for your account. Set <code>user_id</code> on your module rows in <code>python/data/manual_risk_inputs.csv</code> to <code>{currentUserId || 'unavailable'}</code>, then refresh.</div>
+                <div className="page-message">No at-risk modules to show yet. <Link to="/RiskInput" style={{ color: '#238568', fontWeight: 700, textDecoration: 'none' }}>Enter a student’s module results</Link> to run an assessment.</div>
             ) : (
                 <section className="modules-section">
                     <div className="section-heading">
